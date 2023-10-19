@@ -3,6 +3,7 @@ package fill
 import (
 	"encoding/json"
 	"io"
+	"time"
 
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/dynamicpb"
@@ -24,6 +25,10 @@ func NewSilentFiller(in io.Reader) *SilentFiller {
 	}
 }
 
+type EvansSleep struct {
+	Duration time.Duration `json:"evans_wait_ms"`
+}
+
 // Fill fills values of each field from a JSON string. If the JSON string is invalid JSON format or v is a nil pointer,
 // Fill returns ErrCodecMismatch.
 func (f *SilentFiller) Fill(v *dynamicpb.Message) error {
@@ -37,5 +42,12 @@ func (f *SilentFiller) Fill(v *dynamicpb.Message) error {
 		return err
 	}
 
-	return f.dec.Unmarshal(b, v)
+	var cmd EvansSleep
+	err = json.Unmarshal(b, &cmd)
+	if err == nil && cmd.Duration > 0 {
+		time.Sleep(cmd.Duration * time.Millisecond)
+		return nil
+	} else {
+		return f.dec.Unmarshal(b, v)
+	}
 }
